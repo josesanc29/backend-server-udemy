@@ -1,60 +1,61 @@
 var express = require('express');
-var bcrytp = require('bcrytp');
+var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
-var app = express();
-var Usuario = require('../models/usuario');
+
 var SEED = require('../config/config').SEED;
 
-///--------------------------------
-// Metodo post del envio del login
-///--------------------------------
-app.post('/' , (req , res ) =>{
+var app = express();
+var Usuario = require('../models/usuario');
+
+app.post('/', (req, res) => {
 
     var body = req.body;
 
-    Usuario.findOne({email: body.email} , (err , usuarioBD)=>{
+    Usuario.findOne({ email: body.email }, (err, usuarioDB) => {
 
-        if (err){
+        if (err) {
             return res.status(500).json({
                 ok: false,
-                mensaje: 'Se ha producido un error en bd',
-                err: err
+                mensaje: 'Error al buscar usuario',
+                errors: err
             });
-
         }
 
-        if (!usuarioBD){
+        if (!usuarioDB) {
             return res.status(400).json({
-                ok:false,
-                mensaje: 'No existe un usuario con este email: '+email+' .',
-                err: err
+                ok: false,
+                mensaje: 'Credenciales incorrectas - email',
+                errors: err
             });
         }
 
-        if (!bcrytp.compareSync(body.password , usuarioBD.password)){
-
+        if (!bcrypt.compareSync(body.password, usuarioDB.password)) {
             return res.status(400).json({
-                ok:false,
-                mensaje: 'No existe un usuario con esta contraseña : '+password+' .',
-                err: err
+                ok: false,
+                mensaje: 'Credenciales incorrectas - password',
+                errors: err
             });
         }
 
-        //Creamos el Token!!
+        // Crear un token!!!
+        usuarioDB.password = ':)';
 
-        var token = jwt.sign({usuario: usuarioBD}, SEED ,{expiresIn: 14400}); //token expira en 4 horas
-    
-        return res.status(200).json({
+        var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); // 4 horas
+
+        res.status(200).json({
             ok: true,
-            mensaje: 'Login correcto!',
-            id: usuarioBD.id,
+            usuario: usuarioDB,
             token: token,
-            usuario: usuarioBD
+            id: usuarioDB._id
         });
-    
-    });
+
+    })
+
 
 });
+
+
+
 
 
 module.exports = app;
